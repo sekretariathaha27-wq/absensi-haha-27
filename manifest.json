@@ -1,0 +1,23 @@
+{
+  "name": "Absensi Haflah P3TQ - MHMTQ",
+  "short_name": "Absensi Haflah",
+  "description": "Sistem Absensi & Manajemen Kuota Haflah-Haul P3TQ - MHMTQ",
+  "start_url": "/login.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a7c3a",
+  "theme_color": "#0a7c3a",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "https://ui-avatars.com/api/?name=H&background=0a7c3a&color=fff&size=192&bold=true",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://ui-avatars.com/api/?name=H&background=0a7c3a&color=fff&size=512&bold=true",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
