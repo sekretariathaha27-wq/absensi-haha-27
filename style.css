@@ -1,142 +1,374 @@
 /* ============================================================
-   VARIABEL & RESET
+   APLIKASI ABSENSI HAFLAH P3TQ - MHMTQ
+   Style Sheet v1.1 (Perbaikan Bug Modal)
    ============================================================ */
+
+/* ---------- VARIABEL WARNA ---------- */
 :root {
   --primary:       #0a7c3a;
   --primary-dark:  #065c2a;
   --primary-light: #e8f5ec;
+  --gold:          #c9a227;
+  --gold-light:    #faf3dd;
   --success:       #16a34a;
   --warning:       #f59e0b;
   --danger:        #dc2626;
   --gray-50:       #f9fafb;
   --gray-100:      #f3f4f6;
   --gray-200:      #e5e7eb;
+  --gray-300:      #d1d5db;
   --gray-500:      #6b7280;
   --gray-700:      #374151;
   --gray-900:      #111827;
   --radius:        10px;
+  --radius-lg:     16px;
   --shadow:        0 2px 8px rgba(0,0,0,.08);
+  --shadow-lg:     0 10px 40px rgba(0,0,0,.2);
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-body { background: var(--gray-50); color: var(--gray-900); font-size: 15px; line-height: 1.5; }
+/* ---------- RESET ---------- */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gray-900);
+  background: var(--gray-50);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
 
-/* ============================================================
-   TOMBOL
-   ============================================================ */
+/* ⚠️ FIX UTAMA: pastikan atribut [hidden] SELALU menyembunyikan elemen
+   Ini yang memperbaiki bug modal muncul di halaman awal */
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- TOMBOL ---------- */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 12px 18px; border-radius: var(--radius); border: none;
-  font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: all .15s ease; text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .15s ease;
+  text-decoration: none;
+  white-space: nowrap;
 }
-.btn:active { transform: scale(.97); }
+.btn:active:not(:disabled) { transform: scale(.97); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
+
 .btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+
 .btn-success { background: var(--success); color: white; }
-.btn-ghost   { background: transparent; color: var(--gray-700); border: 1px solid var(--gray-200); }
-.btn-sm      { padding: 8px 14px; font-size: 14px; }
-.btn-lg      { padding: 16px 22px; font-size: 16px; width: 100%; }
+.btn-success:hover:not(:disabled) { background: #15803d; }
+
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover:not(:disabled) { background: #b91c1c; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--gray-700);
+  border: 1.5px solid var(--gray-200);
+}
+.btn-ghost:hover:not(:disabled) { background: var(--gray-100); }
+
+.btn-sm { padding: 8px 14px; font-size: 14px; }
+.btn-lg { padding: 16px 22px; font-size: 16px; width: 100%; }
 
 /* ============================================================
    HALAMAN LOGIN
    ============================================================ */
 .login-page {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
 }
-.login-card {
-  background: white; padding: 32px 24px; border-radius: 16px;
-  width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0,0,0,.2);
-}
-.login-logo { font-size: 48px; text-align: center; margin-bottom: 8px; }
-.login-card h1 { text-align: center; margin: 0 0 4px; color: var(--primary); font-size: 22px; }
-.login-sub { text-align: center; color: var(--gray-500); margin: 0 0 24px; font-size: 14px; }
-.login-card label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin: 12px 0 6px; }
-.login-card input {
-  width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius); font-size: 15px; transition: border-color .15s;
-}
-.login-card input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
-.login-card button { width: 100%; margin-top: 20px; }
-.login-footer { text-align: center; color: var(--gray-500); font-size: 12px; margin: 24px 0 0; }
 
+.login-card {
+  background: white;
+  padding: 32px 24px;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.login-logo {
+  font-size: 56px;
+  text-align: center;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.login-card h1 {
+  text-align: center;
+  margin: 0 0 4px;
+  color: var(--primary);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.login-sub {
+  text-align: center;
+  color: var(--gray-500);
+  margin: 0 0 28px;
+  font-size: 14px;
+}
+
+.login-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin: 14px 0 6px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--gray-50);
+  transition: all .15s;
+}
+.login-card input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.login-card button[type="submit"] {
+  width: 100%;
+  margin-top: 22px;
+}
+
+.login-footer {
+  text-align: center;
+  color: var(--gray-500);
+  font-size: 12px;
+  margin: 24px 0 0;
+}
+
+/* Pesan error login */
 .error-box {
-  background: #fee2e2; color: var(--danger); padding: 10px 14px;
-  border-radius: var(--radius); font-size: 13px; margin-top: 12px;
+  background: #fee2e2;
+  color: var(--danger);
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-top: 14px;
+  border-left: 3px solid var(--danger);
 }
 
 /* ============================================================
    APP: HEADER
    ============================================================ */
 .app-header {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; background: var(--primary); color: white;
-  box-shadow: var(--shadow);
-}
-.brand { font-weight: 700; font-size: 15px; }
-.header-right { display: flex; align-items: center; gap: 8px; }
-.panitia-chip {
-  background: rgba(255,255,255,.2); padding: 4px 10px; border-radius: 20px;
-  font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.btn-logout {
-  background: rgba(255,255,255,.15); border: none; color: white;
-  padding: 6px 10px; border-radius: 20px; cursor: pointer; font-size: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
 }
 
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+
+.brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .2px;
+}
+
+.panitia-chip {
+  background: rgba(255,255,255,.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-logout {
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background .15s;
+}
+.btn-logout:hover { background: rgba(255,255,255,.3); }
+
 /* ============================================================
-   TAB CONTENT
+   MAIN CONTENT
    ============================================================ */
-main { padding-bottom: 76px; }
-.tab-content { display: none; padding: 16px; }
-.tab-content.active { display: block; }
+main {
+  padding-bottom: 88px; /* ruang untuk bottom nav */
+}
+
+.tab-content {
+  display: none;
+  padding: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.tab-content.active { display: block; animation: fadeIn .2s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ============================================================
    TAB SCAN
    ============================================================ */
-.scan-wrapper { display: flex; flex-direction: column; gap: 12px; }
-.qr-reader { width: 100%; border-radius: var(--radius); overflow: hidden; background: #000; min-height: 280px; }
+.scan-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qr-reader {
+  width: 100%;
+  min-height: 280px;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
 .qr-reader video { border-radius: var(--radius); }
 
+/* Panel hasil setelah scan */
 .scan-hasil {
-  background: white; border-radius: var(--radius); padding: 16px;
-  box-shadow: var(--shadow); animation: slideUp .25s ease;
+  background: white;
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--primary);
+  animation: slideUp .25s ease;
 }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
 
-.hasil-nama  { font-size: 20px; font-weight: 700; color: var(--primary-dark); }
-.hasil-kelas { color: var(--gray-500); font-size: 14px; margin-bottom: 12px; }
+.hasil-nama {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  line-height: 1.3;
+}
+.hasil-kelas {
+  color: var(--gray-500);
+  font-size: 14px;
+  margin-top: 2px;
+  margin-bottom: 14px;
+}
 
+/* Bar kuota */
 .kuota-bar {
-  display: flex; justify-content: space-around; padding: 12px;
-  background: var(--primary-light); border-radius: var(--radius); margin-bottom: 16px;
-  font-size: 13px; color: var(--gray-700);
+  display: flex;
+  justify-content: space-around;
+  padding: 12px;
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--gray-700);
+  text-align: center;
+  gap: 8px;
 }
-.kuota-bar span { font-weight: 700; font-size: 17px; color: var(--primary); }
+.kuota-bar > div { flex: 1; }
+.kuota-bar span {
+  display: block;
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--primary);
+  line-height: 1.2;
+}
 
+/* Counter L/P */
 .input-row {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
-  padding: 8px; background: var(--gray-50); border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
 }
+
 .counter-btn {
-  width: 48px; height: 48px; border-radius: 50%; border: none;
-  background: var(--primary); color: white; font-size: 22px; font-weight: 700;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 22px;
+  font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  transition: all .1s;
 }
-.counter-btn:active { transform: scale(.9); }
+.counter-btn:active { transform: scale(.9); background: var(--primary-dark); }
+
 .counter-display { flex: 1; text-align: center; }
-.counter-label { display: block; font-size: 12px; color: var(--gray-500); }
-.counter-val   { font-size: 24px; font-weight: 700; color: var(--gray-900); }
+.counter-label {
+  display: block;
+  font-size: 12px;
+  color: var(--gray-500);
+  font-weight: 600;
+}
+.counter-val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1.1;
+}
 
-.btn + .btn { margin-top: 8px; }
+.scan-hasil .btn + .btn { margin-top: 8px; }
 
+/* Pesan error / warning di scan */
 .scan-pesan {
-  padding: 16px; border-radius: var(--radius); font-weight: 600; text-align: center;
+  padding: 16px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  animation: slideUp .25s ease;
 }
 .scan-pesan.error   { background: #fee2e2; color: var(--danger); }
 .scan-pesan.warning { background: #fef3c7; color: #92400e; }
@@ -145,85 +377,279 @@ main { padding-bottom: 76px; }
 /* ============================================================
    TAB DATA
    ============================================================ */
-.data-toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
-.data-toolbar input {
-  flex: 1; padding: 10px 14px; border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius); font-size: 14px;
+.data-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
 }
-.data-toolbar input:focus { outline: none; border-color: var(--primary); }
 
-.list-data { display: flex; flex-direction: column; gap: 8px; }
-.data-item {
-  background: white; padding: 12px 14px; border-radius: var(--radius);
-  box-shadow: var(--shadow); display: grid; grid-template-columns: 70px 1fr; gap: 4px 12px;
+.data-toolbar input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
 }
-.data-kode   { grid-row: span 2; font-weight: 700; color: var(--primary); align-self: center; }
-.data-utama  { font-weight: 600; }
-.data-sub    { font-size: 13px; color: var(--gray-500); }
+.data-toolbar input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.list-data {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-item {
+  background: white;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 4px 12px;
+  transition: transform .1s;
+}
+.data-item:active { transform: scale(.99); }
+
+.data-kode {
+  grid-row: span 2;
+  font-weight: 700;
+  color: var(--primary);
+  align-self: center;
+  font-size: 13px;
+}
+.data-utama {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--gray-900);
+}
+.data-sub {
+  font-size: 13px;
+  color: var(--gray-500);
+}
 
 /* ============================================================
    TAB LAPORAN
    ============================================================ */
 .stat-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-.stat-card {
-  background: white; padding: 16px; border-radius: var(--radius);
-  box-shadow: var(--shadow); text-align: center;
-}
-.stat-label { font-size: 12px; color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px; }
-.stat-val   { font-size: 28px; font-weight: 700; color: var(--primary); margin-top: 4px; }
 
-.section-title { font-size: 15px; color: var(--gray-700); margin: 16px 0 8px; }
-.rekap-list { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.stat-card {
+  background: white;
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  font-weight: 600;
+}
+.stat-val {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 4px;
+  line-height: 1.1;
+}
+
+.section-title {
+  font-size: 15px;
+  color: var(--gray-700);
+  margin: 20px 0 10px;
+  font-weight: 700;
+}
+
+.rekap-list {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
 .rekap-row {
-  display: flex; justify-content: space-between; padding: 12px 14px;
-  border-bottom: 1px solid var(--gray-100); font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 14px;
+  gap: 8px;
 }
 .rekap-row:last-child { border-bottom: none; }
-.rekap-nama  { color: var(--gray-700); }
-.rekap-angka { font-weight: 700; color: var(--primary); }
+.rekap-nama  { color: var(--gray-700); flex: 1; }
+.rekap-angka {
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
 
 /* ============================================================
    BOTTOM NAV
    ============================================================ */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  background: white; border-top: 1px solid var(--gray-200);
-  z-index: 90; padding-bottom: env(safe-area-inset-bottom);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: white;
+  border-top: 1px solid var(--gray-200);
+  z-index: 90;
+  box-shadow: 0 -2px 10px rgba(0,0,0,.04);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
+
 .nav-btn {
-  background: none; border: none; padding: 10px 4px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  color: var(--gray-500); font-size: 11px; font-weight: 600;
+  background: none;
+  border: none;
+  padding: 10px 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--gray-500);
+  font-family: inherit;
+  transition: color .15s;
 }
 .nav-btn.active { color: var(--primary); }
-.nav-icon { font-size: 22px; }
-.nav-label { font-size: 11px; }
+
+.nav-icon { font-size: 22px; line-height: 1; }
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
 
 /* ============================================================
-   MODAL
+   MODAL — DIPERBAIKI
    ============================================================ */
 .modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,.5);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px; z-index: 200; overflow-y: auto;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  /* ⚠️ PENTING: gunakan display:none secara default
+     Aplikasi JS yang mengubah jadi flex saat perlu */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 999;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Modal HANYA tampil saat class .modal-open ditambahkan
+   (lebih aman daripada mengandalkan atribut [hidden]) */
+.modal.modal-open {
+  display: flex;
+}
+
 .modal-box {
-  background: white; padding: 24px; border-radius: 16px;
-  width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+  background: white;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn .25s ease;
+  margin: auto;
 }
-.modal-box h3 { margin: 0 0 16px; color: var(--primary); }
-.modal-box label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
-.modal-box input, .modal-box select {
-  width: 100%; padding: 10px 12px; border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius); font-size: 15px;
+@keyframes modalIn {
+  from { transform: scale(.95); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
-.modal-box input:focus, .modal-box select:focus {
-  outline: none; border-color: var(--primary);
+
+.modal-box h3 {
+  margin: 0 0 16px;
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
 }
-.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+
+.modal-box label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin: 12px 0 4px;
+}
+
+.modal-box input,
+.modal-box select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--gray-50);
+  transition: all .15s;
+}
+.modal-box input:focus,
+.modal-box select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
 .modal-actions .btn { flex: 1; }
 
-.muted { color: var(--gray-500); font-size: 14px; text-align: center; padding: 24px; }
+/* ============================================================
+   UTILITAS
+   ============================================================ */
+.muted {
+  color: var(--gray-500);
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.text-center { text-align: center; }
+
+/* Scrollbar halus (opsional) */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gray-500); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 400px) {
+  .tab-content { padding: 12px; }
+  .stat-val { font-size: 24px; }
+  .hasil-nama { font-size: 18px; }
+}
+
+@media (min-width: 768px) {
+  /* Layout desktop — konten tetap di tengah */
+  .tab-content { max-width: 800px; }
+}
