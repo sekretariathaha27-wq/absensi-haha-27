@@ -1,19 +1,31 @@
 // ============================================================
-// KONFIGURASI — SAMA SEPERTI DI login.js
+// APP.JS — Logika Utama Aplikasi Absensi Haflah P3TQ
+// Versi 1.1 — Konsisten dengan style.css v1.1
 // ============================================================
+
+// ------------------------------------------------------------
+// KONFIGURASI SUPABASE (sudah diisi)
+// ------------------------------------------------------------
 const SUPABASE_URL      = 'https://daqouqefrwentrvzbgev.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_YYpdPRzcVjoD83qQzKfmnA_5OBbcoWA';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ============================================================
-// CEK SESI
-// ============================================================
+// ------------------------------------------------------------
+// CEK SESI LOGIN
+// ------------------------------------------------------------
 const sesi = JSON.parse(localStorage.getItem('haflah_sesi') || 'null');
-if (!sesi) { window.location.href = 'login.html'; throw new Error('No session'); }
 
-document.getElementById('namaPanitia').textContent = sesi.nama;
+if (!sesi || !sesi.id) {
+  window.location.href = 'login.html';
+  throw new Error('No session — redirecting');
+}
 
+document.getElementById('namaPanitia').textContent = sesi.nama || 'Panitia';
+
+// ------------------------------------------------------------
+// LOGOUT
+// ------------------------------------------------------------
 document.getElementById('btnLogout').addEventListener('click', () => {
   if (confirm('Keluar dari aplikasi?')) {
     localStorage.removeItem('haflah_sesi');
@@ -21,163 +33,288 @@ document.getElementById('btnLogout').addEventListener('click', () => {
   }
 });
 
-// ============================================================
-// TAB NAVIGASI
-// ============================================================
+// ------------------------------------------------------------
+// NAVIGASI TAB
+// ------------------------------------------------------------
 document.querySelectorAll('.nav-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    // Ganti tombol aktif
+    document.querySelectorAll('.nav-btn')
+      .forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
 
+    // Ganti konten aktif
+    document.querySelectorAll('.tab-content')
+      .forEach(t => t.classList.remove('active'));
+    const target = document.getElementById('tab-' + btn.dataset.tab);
+    if (target) target.classList.add('active');
+
+    // Aksi per tab
     if (btn.dataset.tab === 'laporan') muatLaporan();
     if (btn.dataset.tab === 'data')    muatData();
+    if (btn.dataset.tab === 'scan')    pastikanScannerJalan();
   });
 });
 
 // ============================================================
-// SCANNER QR
+// BAGIAN 1: SCANNER QR
 // ============================================================
-let qrScanner = null;
-let qrTerdeteksi = null;
-let jumlahL = 0, jumlahP = 0;
+let qrScanner      = null;
+let qrTerdeteksi   = null;   // { kode_qr, kuota }
+let jumlahL        = 0;
+let jumlahP        = 0;
+let jumlahB        = 0;
+let scannerRunning = false;
 
 async function mulaiScanner() {
-  qrScanner = new Html5Qrcode('reader');
+  if (scannerRunning) return;
+
+  if (!qrScanner) {
+    qrScanner = new Html5Qrcode('reader');
+  }
+
   try {
     await qrScanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 260, height: 260 } },
       onScanSukses,
-      () => {} // error tiap frame, abaikan
+      () => {} // abaikan error tiap frame
     );
+    scannerRunning = true;
   } catch (err) {
-    tampilPesan('error', 'Tidak bisa akses kamera: ' + err.message);
+    console.error('Scanner error:', err);
+    tampilPesan('error',
+      'Tidak bisa akses kamera. Beri izin kamera lalu muat ulang halaman.',
+      null);
   }
 }
 
-function onScanSukses(teksQR) {
-  // Format QR: HFL27.SH0042.9a3f1c7e
-  // Kita ambil bagian kedua (kode_qr)
-  const bagian = teksQR.split('.');
-  const kodeQr = bagian.length >= 2 ? bagian[1] : teksQR;
+function pastikanScannerJalan() {
+  if (!scannerRunning) {
+    mulaiScanner();
+  } else if (qrScanner && qrTerdeteksi === null) {
+    qrScanner.resume().catch(() => {});
+  }
+}
 
-  if (qrTerdeteksi === kodeQr) return; // hindari spam
-  qrTerdeteksi = kodeQr;
+async function onScanSukses(teksQR) {
+  // Format QR dari generator: "HFL27.SH0042.9a3f1c7e"
+  const bagian  = String(teksQR).split('.');
+  const kodeQr  = bagian.length >= 2 ? bagian[1] : teksQR;
 
-  tampilkanHasilScan(kodeQr);
+  // Hindari spam
+  if (qrTerdeteksi && qrTerdeteksi.kode_qr === kodeQr) return;
+
+  // Hentikan scanner sementara
+  try { await qrScanner.pause(true); } catch (_) {}
+
+  qrTerdeteksi = { kode_qr: kodeQr };
+  await tampilkanHasilScan(kodeQr);
 }
 
 async function tampilkanHasilScan(kodeQr) {
-  // Hentikan scanner sementara
-  if (qrScanner) await qrScanner.pause(true);
-
   // Ambil data kuota
-  const { data, error } = await supabase
+  const { data: kuota, error } = await supabase
     .from('kuota')
-    .select('*, keluarga:kepala_keluarga(*)') // placeholder relasi
-    .eq('kode_qr', kodeQr)
+    .select('*')
     .eq('event_id', sesi.event_id)
+    .eq('kode_qr', kodeQr)
     .maybeSingle();
 
-  if (error || !data) {
-    tampilPesan('error', 'QR tidak dikenali: ' + kodeQr, () => lanjutScan());
+  if (error) {
+    console.error(error);
+    tampilPesan('error', 'Gagal koneksi ke server. Coba lagi.', lanjutScan);
     return;
   }
 
-  if (data.hangus) {
-    tampilPesan('warning', 'Kuota sudah hangus. Arahkan ke meja rekonsiliasi.', () => lanjutScan());
+  if (!kuota) {
+    tampilPesan('error',
+      'QR tidak dikenali: ' + kodeQr + ' (klik untuk coba lagi)',
+      lanjutScan);
     return;
   }
 
-  // Ambil nama santri (dari keluarga yang sama)
-  const { data: santri } = await supabase
-    .from('santri')
-    .select('nama, kelas, sub_kategori')
-    .eq('keluarga_id', data.pemilik_id)
-    .limit(1)
-    .maybeSingle();
+  if (kuota.hangus) {
+    tampilPesan('warning',
+      'Kuota sudah hangus. Arahkan ke meja rekonsiliasi. (klik untuk lanjut)',
+      lanjutScan);
+    return;
+  }
+
+  // Ambil nama santri (kalau pemilik KELUARGA)
+  let nama  = '(Tamu Undangan)';
+  let kelas = '';
+
+  if (kuota.pemilik_tipe === 'KELUARGA') {
+    const { data: santri } = await supabase
+      .from('santri')
+      .select('nama, kelas, sub_kategori')
+      .eq('keluarga_id', kuota.pemilik_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (santri) {
+      nama  = santri.nama || nama;
+      kelas = (santri.kelas || '') +
+              (santri.sub_kategori ? ' • ' + santri.sub_kategori : '');
+    }
+  } else if (kuota.pemilik_tipe === 'UNDANGAN') {
+    const { data: und } = await supabase
+      .from('undangan')
+      .select('nama, instansi, kategori')
+      .eq('id', kuota.pemilik_id)
+      .maybeSingle();
+
+    if (und) {
+      nama  = und.nama;
+      kelas = und.kategori + (und.instansi ? ' • ' + und.instansi : '');
+    }
+  }
+
+  // Simpan info ke state
+  qrTerdeteksi.kuota = kuota;
+
+  // Update UI
+  document.getElementById('hasilNama').textContent  = nama;
+  document.getElementById('hasilKelas').textContent = kelas;
+
+  const totalKuota = (kuota.kuota_dasar || 0) + (kuota.kuota_tambahan || 0);
+  const terpakai   = kuota.terpakai || 0;
+  const sisa       = totalKuota - terpakai;
+
+  document.getElementById('hasilKuota').textContent    = totalKuota;
+  document.getElementById('hasilTerpakai').textContent = terpakai;
+  document.getElementById('hasilSisa').textContent     = sisa;
+
+  // Reset counter
+  jumlahL = 0;
+  jumlahP = 0;
+  jumlahB = 0;
+  updateCounterUI();
 
   // Tampilkan panel hasil
-  document.getElementById('hasilNama').textContent    = santri?.nama || '(Tamu Undangan)';
-  document.getElementById('hasilKelas').textContent   = santri?.kelas || '';
-  document.getElementById('hasilKuota').textContent   = data.kuota_dasar + data.kuota_tambahan;
-  document.getElementById('hasilTerpakai').textContent= data.terpakai;
-  document.getElementById('hasilSisa').textContent    = data.kuota_dasar + data.kuota_tambahan - data.terpakai;
-
-  jumlahL = 0; jumlahP = 0;
-  updateCounter();
-
   document.getElementById('scanHasil').hidden = false;
+  document.getElementById('scanPesan').hidden = true;
+
+  // Disable tombol kalau kuota habis
+  const btnKonfirmasi = document.getElementById('btnKonfirmasi');
+  if (sisa <= 0) {
+    btnKonfirmasi.disabled = true;
+    btnKonfirmasi.textContent = 'Kuota Habis — Arahkan ke Rekonsiliasi';
+  } else {
+    btnKonfirmasi.disabled = false;
+    btnKonfirmasi.textContent = '✓ Konfirmasi & Serahkan Tiket';
+  }
+
+  // Scroll ke panel
+  setTimeout(() => {
+    document.getElementById('scanHasil')
+      .scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
 }
 
-function updateCounter() {
+function updateCounterUI() {
   document.getElementById('jmlL').textContent = jumlahL;
   document.getElementById('jmlP').textContent = jumlahP;
+  document.getElementById('jmlB').textContent = jumlahB;
 }
 
-// Tombol +/− counter
+// Counter tombol +/-
 document.querySelectorAll('.counter-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const target = btn.dataset.target;
     const delta  = parseInt(btn.dataset.delta, 10);
+
     if (target === 'jmlL') jumlahL = Math.max(0, jumlahL + delta);
     if (target === 'jmlP') jumlahP = Math.max(0, jumlahP + delta);
-    updateCounter();
+    if (target === 'jmlB') jumlahB = Math.max(0, jumlahB + delta);
+
+    updateCounterUI();
   });
 });
 
 // Tombol konfirmasi
-document.getElementById('btnKonfirmasi').addEventListener('click', async () => {
-  if (jumlahL + jumlahP === 0) {
-    alert('Isi dulu jumlah yang hadir');
-    return;
-  }
+document.getElementById('btnKonfirmasi')
+  .addEventListener('click', async () => {
+    if (!qrTerdeteksi || !qrTerdeteksi.kode_qr) return;
+    if (jumlahL + jumlahP <= 0) {
+      alert('Isi dulu jumlah laki-laki atau perempuan yang hadir');
+      return;
+    }
 
-  const nonce = crypto.randomUUID();
-  const { data, error } = await supabase.rpc('checkin', {
-    p_kode_qr:  qrTerdeteksi,
-    p_jumlah_l: jumlahL,
-    p_jumlah_p: jumlahP,
-    p_panitia:  sesi.id,
-    p_jalur:    'BARAT',
-    p_nonce:    nonce
+    const btn = document.getElementById('btnKonfirmasi');
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
+
+    try {
+      const nonce = (crypto.randomUUID && crypto.randomUUID())
+                    || (Date.now() + '-' + Math.random());
+
+      const { data, error } = await supabase.rpc('checkin', {
+        p_kode_qr : qrTerdeteksi.kode_qr,
+        p_jumlah_l: jumlahL,
+        p_jumlah_p: jumlahP,
+        p_panitia : sesi.id,
+        p_jalur   : 'BARAT',
+        p_nonce   : nonce,
+        p_balita  : jumlahB
+      });
+
+      if (error) throw error;
+
+      // Gagal (ditolak sistem)
+      if (!data || !data.ok) {
+        const pesan = {
+          KUOTA_HABIS : '❌ Kuota habis. Sisa: ' + (data?.sisa ?? 0),
+          KUOTA_HANGUS: '❌ Kuota sudah hangus',
+          QR_INVALID  : '❌ QR tidak valid',
+          JUMLAH_KOSONG: '❌ Jumlah tidak boleh 0'
+        }[data?.reason] || ('❌ Gagal: ' + (data?.reason || 'unknown'));
+
+        alert(pesan);
+        btn.disabled = false;
+        btn.textContent = '✓ Konfirmasi & Serahkan Tiket';
+        return;
+      }
+
+      // Sukses
+      const tiket = [];
+      if (data.tiket_reguler > 0) tiket.push(data.tiket_reguler + ' × REGULER');
+      if (data.tiket_panggung)    tiket.push('1 × EMAS (panggung) ⭐');
+
+      alert(
+        '✅ BERHASIL\n\n' +
+        'Nama : ' + (data.nama_santri || '-') + '\n' +
+        'Kelas: ' + (data.kelas || '-') + '\n\n' +
+        'SERAHKAN TIKET:\n' + tiket.join('\n') + '\n\n' +
+        'Sisa kuota: ' + data.sisa
+      );
+
+      lanjutScan();
+
+    } catch (err) {
+      console.error(err);
+      alert('Gagal: ' + (err.message || err.toString()));
+      btn.disabled = false;
+      btn.textContent = '✓ Konfirmasi & Serahkan Tiket';
+    }
   });
 
-  if (error) {
-    alert('Gagal: ' + error.message);
-    return;
-  }
-
-  if (!data.ok) {
-    const pesan = {
-      KUOTA_HABIS:  'Kuota habis. Sisa: ' + data.sisa,
-      KUOTA_HANGUS: 'Kuota sudah hangus',
-      QR_INVALID:   'QR tidak valid'
-    }[data.reason] || ('Gagal: ' + data.reason);
-    alert(pesan);
-    return;
-  }
-
-  // Sukses — tampilkan instruksi tiket
-  const panggung = data.tiket_panggung ? '\n1 × EMAS (panggung) ⭐' : '';
-  alert(
-    `✅ BERHASIL\n\n${data.nama_santri} — ${data.kelas}\n\n` +
-    `SERAHKAN ${data.tiket_reguler} TIKET REGULER${panggung}\n\n` +
-    `Sisa kuota: ${data.sisa}`
-  );
-
-  lanjutScan();
-});
-
-document.getElementById('btnBatalScan').addEventListener('click', lanjutScan);
+// Tombol batal
+document.getElementById('btnBatalScan')
+  .addEventListener('click', lanjutScan);
 
 function lanjutScan() {
   qrTerdeteksi = null;
+  jumlahL = 0; jumlahP = 0; jumlahB = 0;
+  updateCounterUI();
+
   document.getElementById('scanHasil').hidden = true;
   document.getElementById('scanPesan').hidden = true;
-  if (qrScanner) qrScanner.resume();
+
+  if (qrScanner && scannerRunning) {
+    qrScanner.resume().catch(() => {});
+  }
 }
 
 function tampilPesan(tipe, teks, onTutup) {
@@ -185,132 +322,248 @@ function tampilPesan(tipe, teks, onTutup) {
   box.className = 'scan-pesan ' + tipe;
   box.textContent = teks;
   box.hidden = false;
+
   if (onTutup) {
-    box.onclick = () => { box.hidden = true; onTutup(); };
+    box.onclick = () => {
+      box.hidden = true;
+      box.onclick = null;
+      onTutup();
+    };
   }
 }
 
 // ============================================================
-// TAB DATA
+// BAGIAN 2: TAB DATA (Daftar Santri)
 // ============================================================
 async function muatData() {
   const el = document.getElementById('daftarData');
-  el.innerHTML = '<p class="muted">Memuat...</p>';
+  el.innerHTML = '<p class="muted">Memuat data...</p>';
 
   const { data, error } = await supabase
     .from('keluarga')
-    .select('id, kode, nama_wali, no_hp, santri(nama, kelas, sub_kategori)')
+    .select(`
+      id, kode, nama_wali, no_hp,
+      santri (nama, kelas, sub_kategori)
+    `)
     .eq('event_id', sesi.event_id)
     .order('kode')
-    .limit(200);
+    .limit(300);
 
   if (error) {
-    el.innerHTML = '<p class="error-box">Gagal memuat: ' + error.message + '</p>';
+    console.error(error);
+    el.innerHTML =
+      '<p class="muted" style="color:var(--danger)">' +
+      'Gagal memuat: ' + error.message +
+      '</p>';
     return;
   }
 
-  el.innerHTML = data.map(k => `
-    <div class="data-item">
-      <div class="data-kode">${k.kode}</div>
-      <div class="data-utama">${k.santri?.[0]?.nama || '—'}</div>
-      <div class="data-sub">${k.nama_wali} · ${k.no_hp || '-'}</div>
-    </div>
-  `).join('') || '<p class="muted">Belum ada data</p>';
+  if (!data || data.length === 0) {
+    el.innerHTML =
+      '<p class="muted">Belum ada data. Klik <strong>+ Keluarga</strong> ' +
+      'untuk menambah.</p>';
+    return;
+  }
+
+  el.innerHTML = data.map(k => {
+    const s = (k.santri && k.santri[0]) || {};
+    return `
+      <div class="data-item">
+        <div class="data-kode">${escapeHtml(k.kode || '-')}</div>
+        <div class="data-utama">${escapeHtml(s.nama || '—')}</div>
+        <div class="data-sub">
+          ${escapeHtml(k.nama_wali || '-')}
+          ${k.no_hp ? ' · ' + escapeHtml(k.no_hp) : ''}
+          ${s.kelas ? ' · ' + escapeHtml(s.kelas) : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
-document.getElementById('cariData').addEventListener('input', (e) => {
-  const q = e.target.value.toLowerCase();
-  document.querySelectorAll('.data-item').forEach(item => {
-    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+// Pencarian realtime
+document.getElementById('cariData')
+  .addEventListener('input', (e) => {
+    const q = (e.target.value || '').toLowerCase();
+    document.querySelectorAll('#daftarData .data-item').forEach(item => {
+      const cocok = item.textContent.toLowerCase().includes(q);
+      item.style.display = cocok ? '' : 'none';
+    });
   });
-});
-
-// Modal tambah keluarga
-document.getElementById('btnTambahKeluarga').addEventListener('click', () => {
-  document.getElementById('modalKeluarga').hidden = false;
-});
-document.getElementById('btnModalBatal').addEventListener('click', () => {
-  document.getElementById('modalKeluarga').hidden = true;
-});
-
-document.getElementById('formKeluarga').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  // 1. Tambah keluarga
-  const { data: kel, error: err1 } = await supabase.rpc('tambah_keluarga', {
-    p_event:     sesi.event_id,
-    p_kode:      document.getElementById('fKode').value.trim(),
-    p_nama_wali: document.getElementById('fNamaWali').value.trim(),
-    p_no_hp:     document.getElementById('fHp').value.trim(),
-    p_alamat:    ''
-  });
-
-  if (err1 || !kel?.ok) {
-    alert('Gagal tambah keluarga: ' + (err1?.message || kel?.reason));
-    return;
-  }
-
-  // 2. Tambah santri
-  const { data: san, error: err2 } = await supabase.rpc('tambah_santri', {
-    p_event:           sesi.event_id,
-    p_keluarga:        kel.id,
-    p_nis:             document.getElementById('fNis').value.trim(),
-    p_nama:            document.getElementById('fNamaSantri').value.trim(),
-    p_unit:            'P3TQ',
-    p_kelas:           document.getElementById('fKelas').value.trim(),
-    p_kategori_utama:  document.getElementById('fKategori').value,
-    p_sub_kategori:    document.getElementById('fSubKategori').value.trim()
-  });
-
-  if (err2 || !san?.ok) {
-    alert('Gagal tambah santri: ' + (err2?.message || san?.reason));
-    return;
-  }
-
-  alert('✅ Berhasil ditambahkan');
-  document.getElementById('modalKeluarga').hidden = true;
-  document.getElementById('formKeluarga').reset();
-  muatData();
-});
 
 // ============================================================
-// TAB LAPORAN
+// BAGIAN 3: MODAL TAMBAH KELUARGA
+// ============================================================
+const modalKeluarga = document.getElementById('modalKeluarga');
+
+function bukaModal()  { modalKeluarga.classList.add('modal-open'); }
+function tutupModal() { modalKeluarga.classList.remove('modal-open'); }
+
+document.getElementById('btnTambahKeluarga')
+  .addEventListener('click', bukaModal);
+
+document.getElementById('btnModalBatal')
+  .addEventListener('click', tutupModal);
+
+// Tutup modal kalau klik background gelap
+modalKeluarga.addEventListener('click', (e) => {
+  if (e.target === modalKeluarga) tutupModal();
+});
+
+// Submit form
+document.getElementById('formKeluarga')
+  .addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const btn = document.getElementById('btnModalSimpan');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+      const kode         = document.getElementById('fKode').value.trim().toUpperCase();
+      const namaWali     = document.getElementById('fNamaWali').value.trim();
+      const hp           = document.getElementById('fHp').value.trim();
+      const namaSantri   = document.getElementById('fNamaSantri').value.trim();
+      const nis          = document.getElementById('fNis').value.trim();
+      const kelas        = document.getElementById('fKelas').value.trim();
+      const kategori     = document.getElementById('fKategori').value;
+      const subKategori  = document.getElementById('fSubKategori').value.trim();
+
+      // Panggil RPC tambah_keluarga
+      const { data: kel, error: err1 } = await supabase.rpc(
+        'tambah_keluarga',
+        {
+          p_event    : sesi.event_id,
+          p_kode     : kode,
+          p_nama_wali: namaWali,
+          p_no_hp    : hp,
+          p_alamat   : ''
+        }
+      );
+
+      if (err1) throw err1;
+      if (!kel || !kel.ok) {
+        throw new Error('Gagal tambah keluarga: ' +
+                        (kel?.reason || 'unknown'));
+      }
+
+      // Panggil RPC tambah_santri
+      const { data: san, error: err2 } = await supabase.rpc(
+        'tambah_santri',
+        {
+          p_event          : sesi.event_id,
+          p_keluarga       : kel.id,
+          p_nis            : nis,
+          p_nama           : namaSantri,
+          p_unit           : 'P3TQ',
+          p_kelas          : kelas || subKategori,
+          p_kategori_utama : kategori,
+          p_sub_kategori   : subKategori
+        }
+      );
+
+      if (err2) throw err2;
+      if (!san || !san.ok) {
+        throw new Error('Gagal tambah santri: ' +
+                        (san?.reason || 'unknown'));
+      }
+
+      alert('✅ Berhasil ditambahkan\n\n' +
+            'Kode: ' + kode + '\n' +
+            'Santri: ' + namaSantri);
+
+      document.getElementById('formKeluarga').reset();
+      tutupModal();
+      muatData();
+
+    } catch (err) {
+      console.error(err);
+      alert('❌ Gagal:\n' + (err.message || err.toString()));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Simpan';
+    }
+  });
+
+// ============================================================
+// BAGIAN 4: TAB LAPORAN
 // ============================================================
 async function muatLaporan() {
-  const { data, error } = await supabase
+  // 4.1 Statistik utama
+  const { data: dash, error: errDash } = await supabase
     .from('v_dashboard_realtime')
     .select('*')
     .eq('event_id', sesi.event_id)
     .maybeSingle();
 
-  if (error || !data) {
-    console.warn(error);
-    return;
+  if (!errDash && dash) {
+    document.getElementById('statKuota').textContent = dash.total_kuota || 0;
+    document.getElementById('statHadir').textContent = dash.total_hadir || 0;
+    document.getElementById('statL').textContent     = dash.total_putra || 0;
+    document.getElementById('statP').textContent     = dash.total_putri || 0;
   }
 
-  document.getElementById('statKuota').textContent = data.total_kuota || 0;
-  document.getElementById('statHadir').textContent = data.total_hadir || 0;
-  document.getElementById('statL').textContent     = data.total_putra || 0;
-  document.getElementById('statP').textContent     = data.total_putri || 0;
-
-  // Rekap per kategori
-  const { data: rekap } = await supabase
+  // 4.2 Rekap per kategori
+  const rekapEl = document.getElementById('rekapKategori');
+  const { data: rekap, error: errRekap } = await supabase
     .from('v_rekap_sohibul_hajat')
     .select('*')
     .order('no');
 
-  const el = document.getElementById('rekapKategori');
-  el.innerHTML = (rekap || []).map(r => `
+  if (errRekap) {
+    console.error(errRekap);
+    rekapEl.innerHTML =
+      '<p class="muted" style="color:var(--danger)">' +
+      'Gagal memuat rekap: ' + errRekap.message +
+      '</p>';
+    return;
+  }
+
+  if (!rekap || rekap.length === 0) {
+    rekapEl.innerHTML = '<p class="muted">Belum ada data</p>';
+    return;
+  }
+
+  rekapEl.innerHTML = rekap.map(r => `
     <div class="rekap-row">
-      <span class="rekap-nama">${r.kategori}</span>
-      <span class="rekap-angka">${r.total} / ${r.total_kuota}</span>
+      <span class="rekap-nama">${escapeHtml(r.kategori || '-')}</span>
+      <span class="rekap-angka">
+        ${r.total || 0} / ${r.total_kuota || 0}
+        <small style="color:var(--gray-500);font-weight:400">
+          (${r.prosentase || 0}%)
+        </small>
+      </span>
     </div>
-  `).join('') || '<p class="muted">Belum ada data</p>';
+  `).join('');
 }
 
-document.getElementById('btnMuatUlang').addEventListener('click', muatLaporan);
+document.getElementById('btnMuatUlang')
+  .addEventListener('click', muatLaporan);
 
 // ============================================================
-// MULAI
+// UTILITAS
 // ============================================================
-mulaiScanner();
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[c]);
+}
+
+// ============================================================
+// INISIALISASI
+// ============================================================
+(async function init() {
+  // Pastikan modal tertutup di awal (defensive)
+  modalKeluarga.classList.remove('modal-open');
+
+  // Pre-load data supaya tab langsung ada isinya
+  muatData().catch(() => {});
+  muatLaporan().catch(() => {});
+
+  // Nyalakan scanner (default tab = scan)
+  mulaiScanner();
+})();
